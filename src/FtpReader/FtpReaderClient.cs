@@ -2,21 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Text;
 using System.Linq;
-////////////////////////////////////////////////////////////////////////////
-//	Copyright 2009-2018 : Vladimir Novick    https://www.linkedin.com/in/vladimirnovick/  
-//
-//    NO WARRANTIES ARE EXTENDED. USE AT YOUR OWN RISK. 
-//
-// To contact the author with suggestions or comments, use  :vlad.novick@gmail.com
-//
-////////////////////////////////////////////////////////////////////////////
+
 namespace FtpReader.Client
 {
     public class FtpReaderClient
     {
-
         private String m_ftpUrl;
         private String m_userName;
         private String m_password;
@@ -27,7 +18,6 @@ namespace FtpReader.Client
             m_userName = userName;
             m_password = password;
         }
-
         public FtpReaderClient()
         {
             m_ftpUrl = FtpReaderConfig.GetConfigData.Url;
@@ -48,7 +38,6 @@ namespace FtpReader.Client
             return localFileName;
         }
 
-
             /// <summary>
             ///    Dounload file from FTP to local Storage
             /// </summary>
@@ -56,18 +45,17 @@ namespace FtpReader.Client
             /// <param name="localFile"></param>
             public void Download(string ftpFile, string localFile)
         {
-           
+
             try
             {
 
-
-
-
                 FtpWebRequest request = (FtpWebRequest)WebRequest.Create(ftpFile);
-
                 request.Method = WebRequestMethods.Ftp.DownloadFile;
                 request.UseBinary = true;
                 request.UsePassive = true;
+                request.ServicePoint.ConnectionLeaseTimeout = 900000;
+                request.ServicePoint.MaxIdleTime = 900000;
+                request.Timeout = 900000;
                 request.KeepAlive = true;
                 request.Credentials = new NetworkCredential(m_userName,
                                                             m_password);
@@ -76,7 +64,7 @@ namespace FtpReader.Client
                     using (Stream ftpStream = response.GetResponseStream())
                     {
                         long cl = response.ContentLength;
-                        int bufferSize = 20480;
+                        int bufferSize = 51200;
                         int readCount;
                         byte[] byteBuffer = new byte[bufferSize];
 
@@ -84,17 +72,12 @@ namespace FtpReader.Client
                         {
 
                             readCount = ftpStream.Read(byteBuffer, 0, bufferSize);
-         
+
                             while (readCount > 0)
                             {
                                 localFileStream.Write(byteBuffer, 0, readCount);
                                 readCount = ftpStream.Read(byteBuffer, 0, bufferSize);
-                                localFileStream.Flush();
                             }
-
-                            ftpStream.Close();
-                            localFileStream.Close();
-                            response.Close();
                         }
                     }
                 }
@@ -105,8 +88,6 @@ namespace FtpReader.Client
                 throw;
             }
         }
-
-
         public List<String> ListFiles()
         {
             string names = "";
@@ -114,8 +95,6 @@ namespace FtpReader.Client
             {
                 FtpWebRequest request = (FtpWebRequest)WebRequest.Create(m_ftpUrl);
                 request.Method = WebRequestMethods.Ftp.ListDirectory;
-
-
                 request.Credentials = new NetworkCredential(m_userName, m_password);
 
                 using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
@@ -125,9 +104,6 @@ namespace FtpReader.Client
                         using (StreamReader reader = new StreamReader(responseStream))
                         {
                             names = reader.ReadToEnd();
-
-                            reader.Close();
-                            response.Close();
                         }
                     }
                 }

@@ -16,7 +16,5 @@ namespace FtpReader.Client
 
         public string Password { get; set; }
 
-
-    
     }
 }

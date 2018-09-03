@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Vladimir Novick (vlad.novick@gmail.com )</Authors>
-    <Version>1.1.0</Version>
+    <Version>1.5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
