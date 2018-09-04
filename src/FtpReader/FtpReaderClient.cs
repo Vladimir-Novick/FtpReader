@@ -43,8 +43,10 @@ namespace FtpReader.Client
             /// </summary>
             /// <param name="ftpFile">full url with ftp:// </param>
             /// <param name="localFile"></param>
-            public void Download(string ftpFile, string localFile)
+            public long Download(string ftpFile, string localFile)
         {
+
+            long retCount = 0;
 
             try
             {
@@ -56,27 +58,53 @@ namespace FtpReader.Client
                 request.ServicePoint.ConnectionLeaseTimeout = 900000;
                 request.ServicePoint.MaxIdleTime = 900000;
                 request.Timeout = 900000;
+                
                 request.KeepAlive = true;
+                int bufferSize = 51200;
                 request.Credentials = new NetworkCredential(m_userName,
                                                             m_password);
                 using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
                 {
                     using (Stream ftpStream = response.GetResponseStream())
                     {
-                        long cl = response.ContentLength;
-                        int bufferSize = 51200;
+                        var contextLentgth = response.ContentLength;
+                        ftpStream.ReadTimeout = 900000;
+                        long countStream = 0;
+                        try
+                        {
+                            countStream = response.ContentLength;
+                        }
+                        catch (Exception) { }
+                                             
                         int readCount;
                         byte[] byteBuffer = new byte[bufferSize];
 
                         using (FileStream localFileStream = new FileStream(localFile, FileMode.Create))
                         {
-
-                            readCount = ftpStream.Read(byteBuffer, 0, bufferSize);
-
-                            while (readCount > 0)
+                            if (countStream <= 0)
                             {
-                                localFileStream.Write(byteBuffer, 0, readCount);
-                                readCount = ftpStream.Read(byteBuffer, 0, bufferSize);
+                                readCount = ftpStream.ReadAsync(byteBuffer, 0, bufferSize).Result;
+                                retCount += readCount;
+                                while (readCount > 0)
+                                {
+                                    localFileStream.Write(byteBuffer, 0, readCount);
+                                    readCount = ftpStream.ReadAsync(byteBuffer, 0, bufferSize).Result;
+                                    retCount += readCount;
+                                }
+                            } else
+                            {
+                                readCount = readDataFromStream(bufferSize, ftpStream, ref countStream, byteBuffer);
+                                retCount += readCount;
+                                while (readCount > 0)
+                                {
+                                    localFileStream.Write(byteBuffer, 0, readCount);
+                                    readCount = readDataFromStream(bufferSize, ftpStream, ref countStream, byteBuffer);
+                                    retCount += readCount;
+                                    if (countStream == 0)
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
@@ -87,7 +115,22 @@ namespace FtpReader.Client
                 Console.WriteLine(ex.Message);
                 throw;
             }
+            return retCount;
         }
+
+        private static int readDataFromStream(int bufferSize, Stream ftpStream, ref long countStream, byte[] byteBuffer)
+        {
+            int readCount;
+            int realReadCount = bufferSize;
+            if (countStream < (long)realReadCount)
+            {
+                realReadCount = (int)countStream;
+            }
+            readCount = ftpStream.ReadAsync(byteBuffer, 0, realReadCount).Result;
+            countStream =  countStream - realReadCount;
+            return readCount;
+        }
+
         public List<String> ListFiles()
         {
             string names = "";
